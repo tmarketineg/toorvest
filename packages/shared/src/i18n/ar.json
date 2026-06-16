@@ -1,0 +1,105 @@
+{
+  "common": {
+    "loading": "جاري التحميل...",
+    "error": "حدث خطأ ما",
+    "retry": "حاول مرة أخرى",
+    "save": "حفظ",
+    "cancel": "إلغاء",
+    "delete": "حذف",
+    "edit": "تعديل",
+    "search": "بحث",
+    "noResults": "لم يتم العثور على نتائج",
+    "back": "رجوع",
+    "next": "التالي",
+    "submit": "إرسال"
+  },
+  "nav": {
+    "about": "عن المنصة",
+    "sections": "الأقسام",
+    "businessModel": "نموذج الأعمال",
+    "rewardSystem": "نظام المكافآت",
+    "affiliateProgram": "برنامج الأفلييت",
+    "partners": "الشركاء",
+    "csr": "المسؤولية المجتمعية",
+    "pressKit": "ال ktت الإعلامية",
+    "contactUs": "اتصل بنا",
+    "login": "تسجيل الدخول",
+    "signup": "إنشاء حساب"
+  },
+  "home": {
+    "heroEyebrow": "معرض تجاري افتراضي",
+    "heroTitle": "اتصل. استثمر. نَم عالمياً.",
+    "heroSubtitle": "معرض تجاري افتراضي يربط المستثمرين بالفرص في أكثر من 50 دولة وقطاع.",
+    "heroCtaPrimary": "استكشف الأجنحة",
+    "heroCtaSecondary": "للشركات"
+  },
+  "pavilion": {
+    "searchPlaceholder": "بحث في الجناح...",
+    "articles": "المقالات والميزات",
+    "tips": "نصائح الاستثمار",
+    "tourism": "استكشاف السياحة",
+    "emirates": "الإمارات",
+    "contactUs": "اتصل بنا"
+  },
+  "businessHub": {
+    "title": "مركز الأعمال",
+    "exploreBusinesses": "استكشف الشركات",
+    "startBid": "ابدأ مزايدة",
+    "local": "محلي",
+    "international": "دولي",
+    "filterByService": "تصفية حسب الخدمة",
+    "filterByCountry": "تصفية حسب الدولة",
+    "filterByBudget": "تصفية حسب الميزانية"
+  },
+  "bids": {
+    "title": "ابدأ مزايدة",
+    "description": "صف الخدمة التي تبحث عنها وسنربطك بالشركات المناسبة.",
+    "submit": "إرسال الطلب",
+    "myBids": "مزايداتي",
+    "noBids": "لا توجد مزايدات بعد",
+    "noBidsDescription": "أرسل مزايدتك الأولى للحصول على مطابقة مع الشركات.",
+    "responses": "الاستجابات",
+    "accept": "قبول",
+    "shortlist": "اختيار مبدئي"
+  },
+  "investment": {
+    "title": "سياحة الاستثمار",
+    "projects": "المشاريع",
+    "governmental": "حكومية",
+    "individual": "أفراد",
+    "realEstate": "العقارات",
+    "agriculture": "الزراعة",
+    "industry": "الصناعة",
+    "investorsHub": "مركز المستثمرين",
+    "sofia": "مستشارة الذكاء الاصطناعي صوفيا",
+    "incubator": "الحاضنة الرقمية",
+    "experts": "خبراء الاستثمار"
+  },
+  "sofia": {
+    "title": "مستشارة الذكاء الاصطناعي صوفيا",
+    "placeholder": "اسأل صوفيا عن فرص الاستثمار...",
+    "welcome": "مرحباً! أنا صوفيا، دليلك الاستثماري. كيف يمكنني مساعدتك اليوم؟",
+    "noMatch": "ليس لدي بيانات محددة حول ذلك، لكن دعني أقترح بعض البدائل."
+  },
+  "auth": {
+    "login": "تسجيل الدخول",
+    "signup": "إنشاء حساب",
+    "email": "البريد الإلكتروني",
+    "password": "كلمة المرور",
+    "fullName": "الاسم الكامل",
+    "phone": "الهاتف (اختياري)",
+    "forgotPassword": "نسيت كلمة المرور؟",
+    "noAccount": "ليس لديك حساب؟",
+    "hasAccount": "لديك حساب بالفعل؟"
+  },
+  "empty": {
+    "noArticles": "لا توجد مقالات بعد",
+    "noArticlesDescription": "تحقق لاحقاً أو استكشف أقساماً أخرى.",
+    "noCompanies": "لم يتم العثور على شركات",
+    "noCompaniesDescription": "حاول تعديل المرشحات أو أرسل مزايدة.",
+    "noProjects": "لا توجد مشاريع متاحة",
+    "noProjectsDescription": "استكشف أجنحة أخرى للحصول على فرص.",
+    "noResults": "لا توجد نتائج",
+    "noResultsDescription": "جرب كلمات مختلفة أو تصفح التصنيفات."
+  }
+}

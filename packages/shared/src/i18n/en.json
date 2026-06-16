@@ -1,0 +1,107 @@
+{
+  "common": {
+    "loading": "Loading...",
+    "error": "Something went wrong",
+    "retry": "Try Again",
+    "save": "Save",
+    "cancel": "Cancel",
+    "delete": "Delete",
+    "edit": "Edit",
+    "search": "Search",
+    "noResults": "No results found",
+    "back": "Back",
+    "next": "Next",
+    "submit": "Submit"
+  },
+  "nav": {
+    "about": "About",
+    "sections": "Sections",
+    "businessModel": "Business Model",
+    "rewardSystem": "Reward System",
+    "affiliateProgram": "Affiliate Program",
+    "partners": "Partners",
+    "csr": "CSR",
+    "pressKit": "Press Kit",
+    "contactUs": "Contact Us",
+    "login": "Log In",
+    "signup": "Sign Up"
+  },
+  "home": {
+    "heroEyebrow": "Your Virtual Trade Expo",
+    "heroTitle": "Connect. Invest. Grow Globally.",
+    "heroSubtitle": "Virtual business expo connecting investors with opportunities across 50+ countries and industries.",
+    "heroCtaPrimary": "Explore Pavilions",
+    "heroCtaSecondary": "For Businesses",
+    "whyToorvest": "Why Toorvest",
+    "sections": "Explore Sections"
+  },
+  "pavilion": {
+    "searchPlaceholder": "Search pavilion...",
+    "articles": "Articles & Features",
+    "tips": "Investment Tips",
+    "tourism": "Explore Tourism",
+    "emirates": "Emirates",
+    "contactUs": "Contact Us"
+  },
+  "businessHub": {
+    "title": "Business Hub",
+    "exploreBusinesses": "Explore Businesses",
+    "startBid": "Start a Bid",
+    "local": "Local",
+    "international": "International",
+    "filterByService": "Filter by service",
+    "filterByCountry": "Filter by country",
+    "filterByBudget": "Filter by budget"
+  },
+  "bids": {
+    "title": "Start a Bid",
+    "description": "Describe the service you need and we'll match you with the right companies.",
+    "submit": "Submit Request",
+    "myBids": "My Bids",
+    "noBids": "No bids yet",
+    "noBidsDescription": "Submit your first bid to get matched with companies.",
+    "responses": "Responses",
+    "accept": "Accept",
+    "shortlist": "Shortlist"
+  },
+  "investment": {
+    "title": "Investment Tourism",
+    "projects": "Projects",
+    "governmental": "Governmental",
+    "individual": "Individual",
+    "realEstate": "Real Estate",
+    "agriculture": "Agriculture",
+    "industry": "Industry",
+    "investorsHub": "Investors Hub",
+    "sofia": "Sofia AI Advisor",
+    "incubator": "Online Incubator",
+    "experts": "Investment Experts"
+  },
+  "sofia": {
+    "title": "Sofia AI Advisor",
+    "placeholder": "Ask Sofia about investment opportunities...",
+    "welcome": "Hello! I'm Sofia, your investment guide. How can I help you today?",
+    "noMatch": "I don't have specific data on that, but let me suggest some alternatives."
+  },
+  "auth": {
+    "login": "Log In",
+    "signup": "Sign Up",
+    "email": "Email",
+    "password": "Password",
+    "fullName": "Full Name",
+    "phone": "Phone (optional)",
+    "forgotPassword": "Forgot Password?",
+    "noAccount": "Don't have an account?",
+    "hasAccount": "Already have an account?"
+  },
+  "empty": {
+    "noArticles": "No articles yet",
+    "noArticlesDescription": "Check back soon or explore other sections.",
+    "noCompanies": "No companies found",
+    "noCompaniesDescription": "Try adjusting your filters or submit a bid.",
+    "noProjects": "No projects available",
+    "noProjectsDescription": "Explore other pavilions for opportunities.",
+    "noResults": "No results",
+    "noResultsDescription": "Try different keywords or browse categories."
+  }
+}

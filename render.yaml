@@ -1,0 +1,16 @@
+services:
+  - type: web
+    name: toorvest-api
+    runtime: node
+    plan: free
+    buildCommand: cd apps/api && npm install && npx prisma generate && npx nest build
+    startCommand: cd apps/api && node dist/src/main.js
+    envVars:
+      - key: DATABASE_URL
+        sync: false
+      - key: JWT_SECRET
+        sync: false
+      - key: CORS_ORIGIN
+        value: "https://toorvest.netlify.app"
+      - key: NODE_ENV
+        value: "production"

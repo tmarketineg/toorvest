@@ -1,0 +1,454 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ==================== Users & Auth ====================
+
+model users {
+  id            String   @id @default(uuid())
+  email         String   @unique
+  password_hash String
+  full_name     String
+  phone         String?
+  role          Role     @default(INVESTOR)
+  avatar_url    String?
+  country_id    String?
+  is_verified   Boolean  @default(false)
+  created_at    DateTime @default(now())
+  updated_at    DateTime @updatedAt
+
+  country              countries?            @relation(fields: [country_id], references: [id])
+  articles             articles[]
+  companies            companies?
+  smart_bids           smart_bids[]
+  sofia_conversations  sofia_conversations[]
+  affiliate_links      affiliate_links[]
+  rewards              rewards[]
+  notifications        notifications[]
+
+  @@index([email])
+  @@index([country_id])
+}
+
+enum Role {
+  INVESTOR
+  COMPANY
+  ADMIN
+  GOVERNMENT
+}
+
+// ==================== Countries & Emirates ====================
+
+model countries {
+  id              String   @id @default(uuid())
+  name            String   @unique
+  name_ar         String
+  code            String   @unique
+  flag_url        String?
+  description     String?
+  description_ar  String?
+  pavilion_config Json?
+  is_active       Boolean  @default(true)
+  sort_order      Int      @default(0)
+  created_at      DateTime @default(now())
+
+  users                users[]
+  articles             articles[]
+  companies            companies[]
+  emirates             emirates[]
+  smart_bids           smart_bids[]
+  projects             projects[]
+  tips                 tips[]
+  tourism_activities   tourism_activities[]
+  sofia_conversations  sofia_conversations[]
+
+  @@index([code])
+  @@index([is_active])
+  @@index([sort_order])
+}
+
+model emirates {
+  id                 String   @id @default(uuid())
+  country_id         String
+  name               String
+  name_ar            String
+  description        String?
+  description_ar     String?
+  tourism_highlights Json?
+  tips_for_investors Json?
+  images             Json?
+  sort_order         Int      @default(0)
+
+  country              countries?            @relation(fields: [country_id], references: [id])
+  tourism_activities   tourism_activities[]
+
+  @@index([country_id])
+  @@index([sort_order])
+}
+
+// ==================== Categories ====================
+
+model categories {
+  id              String   @id @default(uuid())
+  name            String
+  name_ar         String
+  slug            String   @unique
+  icon_url        String?
+  description     String?
+  description_ar  String?
+  parent_id       String?
+  module          Module
+  sort_order      Int      @default(0)
+  is_active       Boolean  @default(true)
+
+  parent            categories?         @relation("CategoryHierarchy", fields: [parent_id], references: [id])
+  children          categories[]        @relation("CategoryHierarchy")
+  articles          articles[]
+  companies         companies[]
+  smart_bids        smart_bids[]
+  smart_bid_responses smart_bid_responses[]
+
+  @@index([slug])
+  @@index([module])
+  @@index([parent_id])
+  @@index([sort_order])
+}
+
+enum Module {
+  BUSINESS_HUB
+  INVESTMENT_TOURISM
+  PAVILION
+  GENERAL
+}
+
+// ==================== Articles ====================
+
+model articles {
+  id          String    @id @default(uuid())
+  title       String
+  title_ar    String
+  slug        String    @unique
+  content     String
+  content_ar  String
+  excerpt     String?
+  excerpt_ar  String?
+  cover_image String?
+  author_id   String
+  country_id  String?
+  category_id String?
+  module      Module
+  tags        String[]
+  status      ArticleStatus @default(DRAFT)
+  published_at DateTime?
+  created_at  DateTime  @default(now())
+
+  author   users?       @relation(fields: [author_id], references: [id])
+  country  countries?   @relation(fields: [country_id], references: [id])
+  category categories?  @relation(fields: [category_id], references: [id])
+
+  @@index([slug])
+  @@index([author_id])
+  @@index([country_id])
+  @@index([category_id])
+  @@index([status])
+  @@index([module])
+}
+
+enum ArticleStatus {
+  DRAFT
+  PUBLISHED
+  ARCHIVED
+}
+
+// ==================== Companies ====================
+
+model companies {
+  id                  String   @id @default(uuid())
+  user_id             String   @unique
+  company_name        String
+  company_name_ar     String
+  logo_url            String?
+  description         String?
+  description_ar      String?
+  country_id          String?
+  category_id         String?
+  service_categories  String[]
+  service_type        ServiceType?
+  budget_range_min    Decimal? @db.Decimal(12, 2)
+  budget_range_max    Decimal? @db.Decimal(12, 2)
+  is_verified         Boolean  @default(false)
+  subscription_tier   SubscriptionTier @default(BASIC)
+  is_active           Boolean  @default(true)
+  created_at          DateTime @default(now())
+
+  user                 users?              @relation(fields: [user_id], references: [id])
+  country              countries?          @relation(fields: [country_id], references: [id])
+  category             categories?         @relation(fields: [category_id], references: [id])
+  smart_bid_responses  smart_bid_responses[]
+
+  @@index([user_id])
+  @@index([country_id])
+  @@index([category_id])
+  @@index([is_verified])
+  @@index([subscription_tier])
+}
+
+enum ServiceType {
+  LOCAL
+  INTERNATIONAL
+}
+
+enum SubscriptionTier {
+  BASIC
+  PREMIUM
+  ENTERPRISE
+}
+
+// ==================== Smart Bids ====================
+
+model smart_bids {
+  id          String    @id @default(uuid())
+  client_id   String
+  category_id String?
+  country_id  String?
+  title       String
+  description String?
+  budget_min  Decimal?  @db.Decimal(12, 2)
+  budget_max  Decimal?  @db.Decimal(12, 2)
+  deadline    DateTime?
+  status      BidStatus @default(PENDING)
+  routed_at   DateTime?
+  created_at  DateTime  @default(now())
+
+  client   users?       @relation(fields: [client_id], references: [id])
+  category categories?  @relation(fields: [category_id], references: [id])
+  country  countries?   @relation(fields: [country_id], references: [id])
+  responses smart_bid_responses[]
+
+  @@index([client_id])
+  @@index([category_id])
+  @@index([country_id])
+  @@index([status])
+}
+
+enum BidStatus {
+  PENDING
+  ROUTED
+  RESPONDED
+  ACCEPTED
+  COMPLETED
+  EXPIRED
+}
+
+model smart_bid_responses {
+  id                String         @id @default(uuid())
+  bid_id            String
+  company_id        String
+  category_id       String?
+  proposal_text     String?
+  proposed_budget   Decimal?       @db.Decimal(12, 2)
+  proposed_timeline String?
+  status            ResponseStatus @default(PENDING)
+  created_at        DateTime       @default(now())
+
+  bid      smart_bids? @relation(fields: [bid_id], references: [id])
+  company  companies?  @relation(fields: [company_id], references: [id])
+  category categories? @relation(fields: [category_id], references: [id])
+
+  @@index([bid_id])
+  @@index([company_id])
+  @@index([category_id])
+  @@index([status])
+}
+
+enum ResponseStatus {
+  PENDING
+  SHORTLISTED
+  ACCEPTED
+  REJECTED
+}
+
+// ==================== Projects ====================
+
+model projects {
+  id             String      @id @default(uuid())
+  country_id     String?
+  title          String
+  title_ar       String
+  description    String?
+  description_ar String?
+  project_type   ProjectType
+  sector         ProjectSector
+  status         ProjectStatus @default(OFF_PLAN)
+  images         Json?
+  budget         Decimal?    @db.Decimal(15, 2)
+  roi_percentage Float?
+  location       String?
+  contact_info   Json?
+  created_at     DateTime    @default(now())
+
+  country countries? @relation(fields: [country_id], references: [id])
+
+  @@index([country_id])
+  @@index([project_type])
+  @@index([status])
+}
+
+enum ProjectType {
+  GOVERNMENTAL
+  INDIVIDUAL
+}
+
+enum ProjectStatus {
+  OFF_PLAN
+  UNDER_CONSTRUCTION
+  SECONDARY_MARKET
+  OPERATIONAL
+}
+
+enum ProjectSector {
+  REAL_ESTATE
+  AGRICULTURE
+  INDUSTRY
+  OTHER
+}
+
+// ==================== Tips ====================
+
+model tips {
+  id               String  @id @default(uuid())
+  country_id       String?
+  title            String
+  title_ar         String
+  content          String
+  content_ar       String
+  icon_url         String?
+  module           Module
+  display_mode     DisplayMode @default(WEB_STATIC)
+  is_mandatory_view Boolean @default(false)
+  sort_order       Int     @default(0)
+
+  country countries? @relation(fields: [country_id], references: [id])
+
+  @@index([country_id])
+  @@index([module])
+  @@index([sort_order])
+}
+
+enum DisplayMode {
+  WEB_STATIC
+  APP_INTERSTITIAL
+}
+
+// ==================== Tourism Activities ====================
+
+model tourism_activities {
+  id               String   @id @default(uuid())
+  country_id       String?
+  emirate_id       String?
+  name             String
+  name_ar          String
+  description      String?
+  description_ar   String?
+  activity_type    ActivityType
+  image_url        String?
+  interactive_data Json?
+  sort_order       Int      @default(0)
+
+  country countries?  @relation(fields: [country_id], references: [id])
+  emirate emirates?   @relation(fields: [emirate_id], references: [id])
+
+  @@index([country_id])
+  @@index([emirate_id])
+  @@index([activity_type])
+  @@index([sort_order])
+}
+
+enum ActivityType {
+  AGRICULTURE
+  BUSINESS
+  CULTURAL
+  ADVENTURE
+  WELLNESS
+}
+
+// ==================== Sofia AI Conversations ====================
+
+model sofia_conversations {
+  id                      String   @id @default(uuid())
+  user_id                 String
+  messages                Json
+  context_country_id      String?
+  context_sector          String?
+  recommendations_generated Json?
+  created_at              DateTime @default(now())
+  updated_at              DateTime @updatedAt
+
+  user    users?      @relation(fields: [user_id], references: [id])
+  country countries?  @relation(fields: [context_country_id], references: [id])
+
+  @@index([user_id])
+  @@index([context_country_id])
+  @@index([created_at])
+}
+
+// ==================== Affiliate & Rewards ====================
+
+model affiliate_links {
+  id           String   @id @default(uuid())
+  user_id      String
+  link_code    String   @unique
+  clicks       Int      @default(0)
+  conversions  Int      @default(0)
+  reward_balance Decimal @default(0) @db.Decimal(10, 2)
+  created_at   DateTime @default(now())
+
+  user users? @relation(fields: [user_id], references: [id])
+
+  @@index([user_id])
+  @@index([link_code])
+}
+
+model rewards {
+  id          String     @id @default(uuid())
+  user_id     String
+  type        RewardType
+  points      Int        @default(0)
+  description String?
+  created_at  DateTime   @default(now())
+
+  user users? @relation(fields: [user_id], references: [id])
+
+  @@index([user_id])
+  @@index([type])
+  @@index([created_at])
+}
+
+enum RewardType {
+  REFERRAL
+  ENGAGEMENT
+  MILESTONE
+}
+
+// ==================== Notifications ====================
+
+model notifications {
+  id         String   @id @default(uuid())
+  user_id    String
+  title      String
+  message    String
+  type       String
+  is_read    Boolean  @default(false)
+  link       String?
+  created_at DateTime @default(now())
+
+  user users @relation(fields: [user_id], references: [id], onDelete: Cascade)
+
+  @@index([user_id])
+  @@index([user_id, is_read])
+}

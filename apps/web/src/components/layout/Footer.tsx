@@ -20,9 +20,8 @@ export function Footer() {
       { href: '/countries', label: t('footer.countryProfiles') },
     ],
     legal: [
-      { href: '#', label: t('footer.privacyPolicy') },
-      { href: '#', label: t('footer.termsOfService') },
-      { href: '#', label: t('footer.cookiePolicy') },
+      { href: '/privacy', label: t('footer.privacyPolicy') },
+      { href: '/terms', label: t('footer.termsOfService') },
     ],
   };
 

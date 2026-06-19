@@ -246,26 +246,67 @@ async function handleGET(path: string, req: NextRequest) {
     if (!q) return json({ articles: [], companies: [], projects: [] });
     const [articles, companies, projects] = await Promise.all([
       prisma.articles.findMany({
-        where: { OR: [{ title: { contains: q, mode: 'insensitive' } }, { excerpt: { contains: q, mode: 'insensitive' } }], status: 'PUBLISHED' },
+        where: {
+          OR: [
+            { title: { contains: q, mode: 'insensitive' } },
+            { title_ar: { contains: q, mode: 'insensitive' } },
+            { excerpt: { contains: q, mode: 'insensitive' } },
+            { excerpt_ar: { contains: q, mode: 'insensitive' } },
+            { content: { contains: q, mode: 'insensitive' } },
+            { tags: { has: q } },
+          ],
+          status: 'PUBLISHED',
+        },
         take: 10,
       }),
       prisma.companies.findMany({
-        where: { OR: [{ company_name: { contains: q, mode: 'insensitive' } }, { description: { contains: q, mode: 'insensitive' } }] },
+        where: {
+          OR: [
+            { company_name: { contains: q, mode: 'insensitive' } },
+            { description: { contains: q, mode: 'insensitive' } },
+          ],
+        },
         take: 10,
       }),
       prisma.projects.findMany({
-        where: { OR: [{ title: { contains: q, mode: 'insensitive' } }, { description: { contains: q, mode: 'insensitive' } }] },
+        where: {
+          OR: [
+            { title: { contains: q, mode: 'insensitive' } },
+            { description: { contains: q, mode: 'insensitive' } },
+          ],
+        },
         take: 10,
       }),
     ]);
     return json({ articles, companies, projects });
   }
 
+  // Auth: get current user
+  if (path === 'auth/me') {
+    const token = extractToken(req);
+    const payload = token ? verifyToken(token) : null;
+    if (!payload) return json({ message: 'Unauthorized' }, 401);
+    const user = await prisma.users.findUnique({
+      where: { id: payload.sub },
+      select: { id: true, email: true, full_name: true, phone: true, role: true, avatar_url: true, is_verified: true, created_at: true },
+    });
+    if (!user) return json({ message: 'User not found' }, 404);
+    return json(user);
+  }
+
   return json({ message: 'Not found' }, 404);
 }
 
 async function handlePOST(path: string, req: NextRequest) {
-  const body = await req.json();
+  let body: any;
+  try {
+    body = await req.json();
+  } catch {
+    return json({ message: 'Invalid or missing request body' }, 400);
+  }
+  if (!body || typeof body !== 'object') {
+    return json({ message: 'Request body required' }, 400);
+  }
 
   if (path === 'auth/login') {
     const { email, password } = body;
@@ -477,7 +518,7 @@ async function handler(req: NextRequest) {
   }
 }
 
-const AUTH_PATHS = ['auth/login', 'auth/register', 'auth/forgot-password', 'auth/reset-password', 'auth/me', 'contact'];
+const AUTH_PATHS = ['auth/login', 'auth/register', 'auth/forgot-password', 'auth/reset-password', 'auth/me', 'contact', 'sofia'];
 
 function isAuthPath(path: string): boolean {
   return AUTH_PATHS.some(p => path === p);

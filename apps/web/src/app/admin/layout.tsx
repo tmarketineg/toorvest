@@ -1,7 +1,9 @@
 'use client';
 
 import Link from 'next/link';
-import { usePathname } from 'next/navigation';
+import { usePathname, useRouter } from 'next/navigation';
+import { useEffect, useState } from 'react';
+import { useAuthStore } from '@/lib/store';
 import {
   House,
   Article,
@@ -10,6 +12,7 @@ import {
   Bell,
   ChartBar,
   Gear,
+  Warning,
 } from '@phosphor-icons/react/dist/ssr';
 
 const navItems = [
@@ -22,6 +25,46 @@ const navItems = [
 
 export default function AdminLayout({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
+  const router = useRouter();
+  const { user, token } = useAuthStore();
+  const [authorized, setAuthorized] = useState<boolean | null>(null);
+
+  useEffect(() => {
+    if (!token || !user) {
+      router.replace('/auth/login?redirect=/admin');
+      return;
+    }
+    if (user.role !== 'ADMIN') {
+      setAuthorized(false);
+      return;
+    }
+    setAuthorized(true);
+  }, [token, user, router]);
+
+  if (authorized === null) {
+    return (
+      <div className="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
+        <div className="flex h-96 items-center justify-center">
+          <div className="h-8 w-8 animate-spin rounded-full border-2 border-[hsl(var(--primary))] border-t-transparent" />
+        </div>
+      </div>
+    );
+  }
+
+  if (authorized === false) {
+    return (
+      <div className="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
+        <div className="flex h-96 flex-col items-center justify-center gap-4">
+          <Warning weight="light" className="h-16 w-16 text-red-500" />
+          <h2 className="text-xl font-semibold">Access Denied</h2>
+          <p className="text-[hsl(var(--text-secondary))]">You need admin privileges to access this page.</p>
+          <Link href="/" className="mt-2 rounded-xl bg-[hsl(var(--primary))] px-5 py-2.5 text-sm font-medium text-[hsl(var(--primary-foreground))]">
+            Go Home
+          </Link>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8">

@@ -32,7 +32,7 @@ export const metadata: Metadata = {
     title: 'Toorvest',
     description:
       'Global Business & Investment Hub connecting countries, businesses, and investors.',
-    url: 'https://toorvest.com',
+    url: process.env.NEXT_PUBLIC_SITE_URL || 'https://toorvest.vercel.app',
     siteName: 'Toorvest',
     locale: 'en_US',
     type: 'website',

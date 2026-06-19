@@ -1,5 +1,0 @@
-{
-  "buildCommand": "cd apps/web && npx next build",
-  "framework": "nextjs",
-  "outputDirectory": "apps/web/.next"
-}

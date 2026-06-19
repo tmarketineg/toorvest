@@ -87,123 +87,176 @@ async function handleGET(path: string, req: NextRequest) {
   const limit = Math.min(parseInt(sp.get('limit') || '20'), 100);
   const skip = (page - 1) * limit;
 
-  switch (path) {
-    case 'countries': {
-      return json(await prisma.countries.findMany({ orderBy: { name: 'asc' } }));
-    }
-    case 'countries/[code]': {
-      const code = path.split('/').pop()!;
-      const c = await prisma.countries.findFirst({ where: { code: code.toUpperCase() } });
-      return c ? json(c) : json({ message: 'Not found' }, 404);
-    }
-    case 'categories': {
-      return json(await prisma.categories.findMany({ orderBy: { name: 'asc' } }));
-    }
-    case 'articles': {
-      const where: any = {};
-      if (sp.get('countryId')) where.country_id = sp.get('countryId');
-      if (sp.get('categoryId')) where.category_id = sp.get('categoryId');
-      if (sp.get('status')) where.status = sp.get('status');
-      const [data, total] = await Promise.all([
-        prisma.articles.findMany({
-          where, skip, take: limit, orderBy: { published_at: 'desc' },
-          include: {
-            author: { select: { id: true, full_name: true, avatar_url: true } },
-            country: { select: { id: true, name: true, code: true } },
-            category: { select: { id: true, name: true, slug: true } },
-          },
-        }),
-        prisma.articles.count({ where }),
-      ]);
-      return json({ data, meta: { total, page, limit, totalPages: Math.ceil(total / limit) } });
-    }
-    case 'articles/search': {
-      const q = sp.get('q');
-      if (!q) return json({ message: 'q is required' }, 400);
-      return json(await prisma.articles.findMany({
-        where: {
-          OR: [
-            { title: { contains: q, mode: 'insensitive' } },
-            { title_ar: { contains: q, mode: 'insensitive' } },
-            { excerpt: { contains: q, mode: 'insensitive' } },
-          ],
-          status: 'PUBLISHED',
-        },
-        take: 20,
+  // Countries
+  if (path === 'countries') {
+    return json(await prisma.countries.findMany({ orderBy: { name: 'asc' } }));
+  }
+  if (path === 'categories') {
+    return json(await prisma.categories.findMany({ orderBy: { name: 'asc' } }));
+  }
+  if (path === 'emirates') {
+    return json(await prisma.emirates.findMany({ orderBy: { name: 'asc' } }));
+  }
+
+  // Country by code: countries/AE or countries/by-code/AE
+  if (path.startsWith('countries/by-code/')) {
+    const code = path.split('/').pop()!;
+    const c = await prisma.countries.findFirst({ where: { code: code.toUpperCase() } });
+    return c ? json(c) : json({ message: 'Not found' }, 404);
+  }
+  if (path.startsWith('countries/') && path.split('/').length === 2) {
+    const code = path.split('/')[1];
+    const c = await prisma.countries.findFirst({ where: { code: code.toUpperCase() } });
+    return c ? json(c) : json({ message: 'Not found' }, 404);
+  }
+
+  // Country sub-resources: countries/{id}/articles, etc.
+  if (path.startsWith('countries/') && path.endsWith('/articles')) {
+    const id = path.split('/')[2];
+    const articles = await prisma.articles.findMany({
+      where: { country_id: id, status: 'PUBLISHED' },
+      orderBy: { published_at: 'desc' },
+      include: { author: { select: { id: true, full_name: true } } },
+    });
+    return json(articles);
+  }
+  if (path.startsWith('countries/') && path.endsWith('/emirates')) {
+    const id = path.split('/')[2];
+    const emirates = await prisma.emirates.findMany({
+      where: { country_id: id },
+      orderBy: { sort_order: 'asc' },
+    });
+    return json(emirates);
+  }
+  if (path.startsWith('countries/') && path.endsWith('/tourism')) {
+    const id = path.split('/')[2];
+    const tourism = await prisma.tourism_activities.findMany({
+      where: { country_id: id },
+      orderBy: { sort_order: 'asc' },
+    });
+    return json(tourism);
+  }
+  if (path.startsWith('countries/') && path.endsWith('/tips')) {
+    const id = path.split('/')[2];
+    const tips = await prisma.tips.findMany({
+      where: { country_id: id },
+      orderBy: { sort_order: 'asc' },
+    });
+    return json(tips);
+  }
+
+  // Articles
+  if (path === 'articles/search') {
+    const q = sp.get('q');
+    if (!q) return json({ message: 'q is required' }, 400);
+    return json(await prisma.articles.findMany({
+      where: {
+        OR: [
+          { title: { contains: q, mode: 'insensitive' } },
+          { title_ar: { contains: q, mode: 'insensitive' } },
+          { excerpt: { contains: q, mode: 'insensitive' } },
+        ],
+        status: 'PUBLISHED',
+      },
+      take: 20,
+      include: {
+        author: { select: { id: true, full_name: true } },
+        country: { select: { id: true, name: true, code: true } },
+        category: { select: { id: true, name: true, slug: true } },
+      },
+    }));
+  }
+  if (path === 'articles') {
+    const where: any = {};
+    if (sp.get('countryId')) where.country_id = sp.get('countryId');
+    if (sp.get('categoryId')) where.category_id = sp.get('categoryId');
+    if (sp.get('status')) where.status = sp.get('status');
+    const [data, total] = await Promise.all([
+      prisma.articles.findMany({
+        where, skip, take: limit, orderBy: { published_at: 'desc' },
         include: {
-          author: { select: { id: true, full_name: true } },
+          author: { select: { id: true, full_name: true, avatar_url: true } },
           country: { select: { id: true, name: true, code: true } },
           category: { select: { id: true, name: true, slug: true } },
         },
-      }));
-    }
-    case 'companies': {
-      const [data, total] = await Promise.all([
-        prisma.companies.findMany({
-          skip, take: limit, orderBy: { created_at: 'desc' },
-          include: { country: { select: { id: true, name: true, code: true } } },
-        }),
-        prisma.companies.count(),
-      ]);
-      return json({ data, meta: { total, page, limit, totalPages: Math.ceil(total / limit) } });
-    }
-    case 'projects': {
-      const [data, total] = await Promise.all([
-        prisma.projects.findMany({
-          skip, take: limit, orderBy: { created_at: 'desc' },
-          include: { country: { select: { id: true, name: true, code: true } } },
-        }),
-        prisma.projects.count(),
-      ]);
-      return json({ data, meta: { total, page, limit, totalPages: Math.ceil(total / limit) } });
-    }
-    case 'smart-bids': {
-      return json(await prisma.smart_bids.findMany({
-        orderBy: { created_at: 'desc' },
-        include: {
-          client: { select: { id: true, full_name: true, email: true } },
-          category: { select: { id: true, name: true } },
-          country: { select: { id: true, name: true, code: true } },
-          responses: { include: { company: { select: { id: true, company_name: true, logo_url: true, is_verified: true } } } },
-        },
-      }));
-    }
-    case 'emirates': {
-      return json(await prisma.emirates.findMany({ orderBy: { name: 'asc' } }));
-    }
-    case 'tourism/activities': {
-      const where: any = {};
-      if (sp.get('countryId')) where.country_id = sp.get('countryId');
-      return json(await prisma.tourism_activities.findMany({
-        where, orderBy: { name: 'asc' },
-        include: { country: { select: { id: true, name: true, code: true } } },
-      }));
-    }
-    case 'tourism/tips': {
-      return json(await prisma.tips.findMany({ orderBy: { title: 'asc' } }));
-    }
-    case 'search': {
-      const q = sp.get('q');
-      if (!q) return json({ articles: [], companies: [], projects: [] });
-      const [articles, companies, projects] = await Promise.all([
-        prisma.articles.findMany({
-          where: { OR: [{ title: { contains: q, mode: 'insensitive' } }, { excerpt: { contains: q, mode: 'insensitive' } }], status: 'PUBLISHED' },
-          take: 10,
-        }),
-        prisma.companies.findMany({
-          where: { OR: [{ company_name: { contains: q, mode: 'insensitive' } }, { description: { contains: q, mode: 'insensitive' } }] },
-          take: 10,
-        }),
-        prisma.projects.findMany({
-          where: { OR: [{ title: { contains: q, mode: 'insensitive' } }, { description: { contains: q, mode: 'insensitive' } }] },
-          take: 10,
-        }),
-      ]);
-      return json({ articles, companies, projects });
-    }
-    default:
-      return json({ message: 'Not found' }, 404);
+      }),
+      prisma.articles.count({ where }),
+    ]);
+    return json({ data, meta: { total, page, limit, totalPages: Math.ceil(total / limit) } });
   }
+
+  // Companies
+  if (path === 'companies') {
+    const [data, total] = await Promise.all([
+      prisma.companies.findMany({
+        skip, take: limit, orderBy: { created_at: 'desc' },
+        include: { country: { select: { id: true, name: true, code: true } } },
+      }),
+      prisma.companies.count(),
+    ]);
+    return json({ data, meta: { total, page, limit, totalPages: Math.ceil(total / limit) } });
+  }
+
+  // Projects
+  if (path === 'projects') {
+    const [data, total] = await Promise.all([
+      prisma.projects.findMany({
+        skip, take: limit, orderBy: { created_at: 'desc' },
+        include: { country: { select: { id: true, name: true, code: true } } },
+      }),
+      prisma.projects.count(),
+    ]);
+    return json({ data, meta: { total, page, limit, totalPages: Math.ceil(total / limit) } });
+  }
+
+  // Smart bids
+  if (path === 'smart-bids') {
+    return json(await prisma.smart_bids.findMany({
+      orderBy: { created_at: 'desc' },
+      include: {
+        client: { select: { id: true, full_name: true, email: true } },
+        category: { select: { id: true, name: true } },
+        country: { select: { id: true, name: true, code: true } },
+        responses: { include: { company: { select: { id: true, company_name: true, logo_url: true, is_verified: true } } } },
+      },
+    }));
+  }
+
+  // Tourism
+  if (path === 'tourism/activities') {
+    const where: any = {};
+    if (sp.get('countryId')) where.country_id = sp.get('countryId');
+    return json(await prisma.tourism_activities.findMany({
+      where, orderBy: { name: 'asc' },
+      include: { country: { select: { id: true, name: true, code: true } } },
+    }));
+  }
+  if (path === 'tourism/tips') {
+    return json(await prisma.tips.findMany({ orderBy: { title: 'asc' } }));
+  }
+
+  // Search
+  if (path === 'search') {
+    const q = sp.get('q');
+    if (!q) return json({ articles: [], companies: [], projects: [] });
+    const [articles, companies, projects] = await Promise.all([
+      prisma.articles.findMany({
+        where: { OR: [{ title: { contains: q, mode: 'insensitive' } }, { excerpt: { contains: q, mode: 'insensitive' } }], status: 'PUBLISHED' },
+        take: 10,
+      }),
+      prisma.companies.findMany({
+        where: { OR: [{ company_name: { contains: q, mode: 'insensitive' } }, { description: { contains: q, mode: 'insensitive' } }] },
+        take: 10,
+      }),
+      prisma.projects.findMany({
+        where: { OR: [{ title: { contains: q, mode: 'insensitive' } }, { description: { contains: q, mode: 'insensitive' } }] },
+        take: 10,
+      }),
+    ]);
+    return json({ articles, companies, projects });
+  }
+
+  return json({ message: 'Not found' }, 404);
 }
 
 async function handlePOST(path: string, req: NextRequest) {

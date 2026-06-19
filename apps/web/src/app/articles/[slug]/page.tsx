@@ -108,7 +108,9 @@ export default function ArticleDetailPage() {
             {article.excerpt}
           </p>
           {article.content && (
-            <div dangerouslySetInnerHTML={{ __html: article.content }} />
+            <div className="whitespace-pre-wrap text-[hsl(var(--text-secondary))]">
+              {article.content}
+            </div>
           )}
         </div>
 

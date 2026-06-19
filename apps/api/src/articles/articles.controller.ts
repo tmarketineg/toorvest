@@ -15,7 +15,7 @@ import { ApiTags, ApiOperation, ApiQuery, ApiBearerAuth } from '@nestjs/swagger'
 import { ArticlesService } from './articles.service';
 import { CreateArticleDto, UpdateArticleDto } from './dto/article.dto';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
-import { RolesGuard } from '../auth/roles.guard';
+import { RolesGuard, Roles } from '../auth/roles.guard';
 import { Role } from '@prisma/client';
 
 @ApiTags('Articles')
@@ -41,7 +41,7 @@ export class ArticlesController {
   ) {
     return this.articlesService.findAll({
       page: page ? parseInt(page, 10) : 1,
-      limit: limit ? parseInt(limit, 10) : 20,
+      limit: limit ? Math.min(parseInt(limit, 10), 100) : 20,
       countryId,
       categoryId,
       module,
@@ -66,6 +66,7 @@ export class ArticlesController {
 
   @Post()
   @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles(Role.ADMIN)
   @ApiBearerAuth()
   @ApiOperation({ summary: 'Create article (admin only)' })
   async create(@Request() req, @Body() dto: CreateArticleDto) {
@@ -74,6 +75,7 @@ export class ArticlesController {
 
   @Put(':id')
   @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles(Role.ADMIN)
   @ApiBearerAuth()
   @ApiOperation({ summary: 'Update article (admin only)' })
   async update(@Param('id') id: string, @Body() dto: UpdateArticleDto) {
@@ -82,6 +84,7 @@ export class ArticlesController {
 
   @Delete(':id')
   @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles(Role.ADMIN)
   @ApiBearerAuth()
   @ApiOperation({ summary: 'Delete article (admin only)' })
   async remove(@Param('id') id: string) {

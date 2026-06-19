@@ -46,7 +46,9 @@ export class UploadService {
   }
 
   deleteFile(filename: string): boolean {
-    const filePath = join(UPLOAD_DIR, filename);
+    const sanitised = filename.replace(/[^a-zA-Z0-9._-]/g, '');
+    if (sanitised !== filename || filename.includes('..')) return false;
+    const filePath = join(UPLOAD_DIR, sanitised);
     if (existsSync(filePath)) {
       unlinkSync(filePath);
       return true;

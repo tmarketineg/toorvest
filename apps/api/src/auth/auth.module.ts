@@ -14,7 +14,7 @@ import { UsersModule } from '../users/users.module';
     JwtModule.registerAsync({
       imports: [ConfigModule],
       useFactory: (config: ConfigService) => ({
-        secret: config.get<string>('JWT_SECRET', 'toorvest-secret-key'),
+        secret: config.get<string>('JWT_SECRET') || (() => { throw new Error('JWT_SECRET environment variable is required'); })(),
         signOptions: { expiresIn: '7d' },
       }),
       inject: [ConfigService],

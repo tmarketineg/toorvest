@@ -8,6 +8,7 @@ import {
   MessageBody,
 } from '@nestjs/websockets';
 import { Server, Socket } from 'socket.io';
+import { JwtService } from '@nestjs/jwt';
 
 @WebSocketGateway({
   cors: {
@@ -24,12 +25,30 @@ export class NotificationsGateway
 
   private userSockets = new Map<string, string>();
 
-  handleConnection(client: Socket) {
-    console.log(`Client connected: ${client.id}`);
+  constructor(private jwtService: JwtService) {}
+
+  private extractJwtFromSocket(client: Socket): string | null {
+    const auth = client.handshake?.auth?.token
+      || client.handshake?.headers?.authorization?.replace('Bearer ', '');
+    return auth || null;
+  }
+
+  async handleConnection(client: Socket) {
+    const token = this.extractJwtFromSocket(client);
+    if (!token) {
+      client.disconnect();
+      return;
+    }
+    try {
+      const payload = await this.jwtService.verifyAsync(token);
+      client.data = { userId: payload.sub, role: payload.role };
+      console.log(`Client connected: ${client.id} user=${payload.sub}`);
+    } catch {
+      client.disconnect();
+    }
   }
 
   handleDisconnect(client: Socket) {
-    console.log(`Client disconnected: ${client.id}`);
     for (const [userId, socketId] of this.userSockets.entries()) {
       if (socketId === client.id) {
         this.userSockets.delete(userId);
@@ -43,6 +62,9 @@ export class NotificationsGateway
     @ConnectedSocket() client: Socket,
     @MessageBody() data: { userId: string },
   ) {
+    if (client.data?.userId !== data.userId) {
+      return { event: 'error', data: 'Cannot join another user room' };
+    }
     this.userSockets.set(data.userId, client.id);
     client.join(`user:${data.userId}`);
     return { event: 'joined', data: { userId: data.userId } };

@@ -44,7 +44,7 @@ export class AdminController {
   ) {
     return this.adminService.getUsers(
       page ? parseInt(page, 10) : 1,
-      limit ? parseInt(limit, 10) : 20,
+      limit ? Math.min(parseInt(limit, 10), 100) : 20,
     );
   }
 

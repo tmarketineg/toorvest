@@ -119,7 +119,7 @@ async function handleGET(path: string, req: NextRequest) {
       }));
     }
     case 'tourism/tips': {
-      return json(await prisma.tourism_tips.findMany({ orderBy: { created_at: 'desc' } }));
+      return json(await prisma.tips.findMany({ orderBy: { title: 'asc' } }));
     }
     case 'search': {
       const q = sp.get('q');

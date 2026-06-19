@@ -11,11 +11,13 @@ import {
   GlobeHemisphereWest,
   SignOut,
   UserCircle,
+  Bell,
 } from '@phosphor-icons/react/dist/ssr';
 import { motion, AnimatePresence } from 'motion/react';
 import { useLocale, type Locale } from '@/lib/use-locale';
 import { useTranslation } from '@/i18n/use-translation';
 import { useAuthStore } from '@/lib/store';
+import api from '@/lib/api';
 
 export function Navbar() {
   const { theme, setTheme } = useTheme();
@@ -25,11 +27,23 @@ export function Navbar() {
   const [mobileOpen, setMobileOpen] = useState(false);
   const [scrolled, setScrolled] = useState(false);
   const { user, isAuthenticated, initializeAuth, logout } = useAuthStore();
+  const [unreadCount, setUnreadCount] = useState(0);
 
   useEffect(() => {
     setMounted(true);
     initializeAuth();
   }, [initializeAuth]);
+
+  useEffect(() => {
+    if (isAuthenticated) {
+      api.get('/notifications')
+        .then((res) => {
+          const notifs = Array.isArray(res.data) ? res.data : [];
+          setUnreadCount(notifs.filter((n: any) => !n.isRead).length);
+        })
+        .catch(() => {});
+    }
+  }, [isAuthenticated]);
 
   useEffect(() => {
     const handleScroll = () => setScrolled(window.scrollY > 40);
@@ -109,6 +123,17 @@ export function Navbar() {
 
             {mounted && isAuthenticated && user ? (
               <div className="hidden items-center gap-2 md:flex">
+                <Link
+                  href="/notifications"
+                  className="relative flex h-9 w-9 items-center justify-center rounded-full text-[hsl(var(--text-secondary))] transition-all duration-300 ease-premium hover:bg-[hsl(var(--surface-elevated))]"
+                >
+                  <Bell weight="light" className="h-4 w-4" />
+                  {unreadCount > 0 && (
+                    <span className="absolute -right-0.5 -top-0.5 flex h-4 w-4 items-center justify-center rounded-full bg-brand-600 text-[10px] font-bold text-white">
+                      {unreadCount > 9 ? '9+' : unreadCount}
+                    </span>
+                  )}
+                </Link>
                 <Link
                   href="/business-hub/dashboard"
                   className="flex items-center gap-2 rounded-full px-4 py-2 text-sm font-medium text-[hsl(var(--text-secondary))] transition-all duration-300 ease-premium hover:bg-[hsl(var(--surface-elevated))]"
@@ -211,6 +236,19 @@ export function Navbar() {
               >
                 {isAuthenticated ? (
                   <>
+                    <Link
+                      href="/notifications"
+                      onClick={() => setMobileOpen(false)}
+                      className="flex items-center gap-2 rounded-full border border-[hsl(var(--border))] px-6 py-3 text-sm font-medium"
+                    >
+                      <Bell weight="light" className="h-4 w-4" />
+                      Notifications
+                      {unreadCount > 0 && (
+                        <span className="ml-1 flex h-5 w-5 items-center justify-center rounded-full bg-brand-600 text-[10px] font-bold text-white">
+                          {unreadCount}
+                        </span>
+                      )}
+                    </Link>
                     <Link
                       href="/business-hub/dashboard"
                       onClick={() => setMobileOpen(false)}

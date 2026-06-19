@@ -112,7 +112,7 @@ async function handleGET(path: string, req: NextRequest) {
 
   // Country sub-resources: countries/{id}/articles, etc.
   if (path.startsWith('countries/') && path.endsWith('/articles')) {
-    const id = path.split('/')[2];
+    const id = path.split('/')[1];
     const articles = await prisma.articles.findMany({
       where: { country_id: id, status: 'PUBLISHED' },
       orderBy: { published_at: 'desc' },
@@ -121,7 +121,7 @@ async function handleGET(path: string, req: NextRequest) {
     return json(articles);
   }
   if (path.startsWith('countries/') && path.endsWith('/emirates')) {
-    const id = path.split('/')[2];
+    const id = path.split('/')[1];
     const emirates = await prisma.emirates.findMany({
       where: { country_id: id },
       orderBy: { sort_order: 'asc' },
@@ -129,7 +129,7 @@ async function handleGET(path: string, req: NextRequest) {
     return json(emirates);
   }
   if (path.startsWith('countries/') && path.endsWith('/tourism')) {
-    const id = path.split('/')[2];
+    const id = path.split('/')[1];
     const tourism = await prisma.tourism_activities.findMany({
       where: { country_id: id },
       orderBy: { sort_order: 'asc' },
@@ -137,7 +137,7 @@ async function handleGET(path: string, req: NextRequest) {
     return json(tourism);
   }
   if (path.startsWith('countries/') && path.endsWith('/tips')) {
-    const id = path.split('/')[2];
+    const id = path.split('/')[1];
     const tips = await prisma.tips.findMany({
       where: { country_id: id },
       orderBy: { sort_order: 'asc' },

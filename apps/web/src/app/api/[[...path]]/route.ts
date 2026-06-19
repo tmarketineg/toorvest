@@ -1,7 +1,29 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { PrismaClient } from '@prisma/client';
+import jwt from 'jsonwebtoken';
 
 const prisma = new PrismaClient();
+
+const JWT_SECRET = process.env.JWT_SECRET;
+if (!JWT_SECRET) {
+  console.error('CRITICAL: JWT_SECRET environment variable is not set');
+}
+
+const rateLimitMap = new Map<string, { count: number; resetAt: number }>();
+const RATE_LIMIT = 100;
+const RATE_WINDOW = 60 * 1000;
+
+function checkRateLimit(ip: string): boolean {
+  const now = Date.now();
+  const entry = rateLimitMap.get(ip);
+  if (!entry || now > entry.resetAt) {
+    rateLimitMap.set(ip, { count: 1, resetAt: now + RATE_WINDOW });
+    return true;
+  }
+  if (entry.count >= RATE_LIMIT) return false;
+  entry.count++;
+  return true;
+}
 
 function toCamelCase(obj: any): any {
   if (Array.isArray(obj)) return obj.map(toCamelCase);
@@ -18,6 +40,45 @@ function toCamelCase(obj: any): any {
 
 function json(data: any, status = 200) {
   return NextResponse.json(toCamelCase(data), { status });
+}
+
+function verifyToken(token: string): { sub: string; email: string; role: string } | null {
+  if (!JWT_SECRET) return null;
+  try {
+    return jwt.verify(token, JWT_SECRET) as { sub: string; email: string; role: string };
+  } catch {
+    return null;
+  }
+}
+
+function extractToken(req: NextRequest): string | null {
+  const auth = req.headers.get('authorization');
+  if (auth?.startsWith('Bearer ')) return auth.slice(7);
+  return null;
+}
+
+const PUBLIC_PATHS = [
+  'countries',
+  'categories',
+  'articles',
+  'articles/search',
+  'companies',
+  'projects',
+  'emirates',
+  'tourism/activities',
+  'tourism/tips',
+  'search',
+  'smart-bids',
+];
+
+function isPublicPath(path: string): boolean {
+  return PUBLIC_PATHS.some(p => path === p || path.startsWith(p + '/'));
+}
+
+const ADMIN_PATHS = ['admin'];
+
+function isAdminPath(path: string): boolean {
+  return ADMIN_PATHS.some(p => path.startsWith(p));
 }
 
 async function handleGET(path: string, req: NextRequest) {
@@ -145,16 +206,221 @@ async function handleGET(path: string, req: NextRequest) {
   }
 }
 
+async function handlePOST(path: string, req: NextRequest) {
+  const body = await req.json();
+
+  switch (path) {
+    case 'auth/login': {
+      const { email, password } = body;
+      if (!email || !password) return json({ message: 'Email and password required' }, 400);
+      const user = await prisma.users.findUnique({ where: { email } });
+      if (!user) return json({ message: 'Invalid credentials' }, 401);
+      const bcrypt = await import('bcryptjs');
+      const valid = await bcrypt.compare(password, user.password_hash);
+      if (!valid) return json({ message: 'Invalid credentials' }, 401);
+      const token = jwt.sign({ sub: user.id, email: user.email, role: user.role }, JWT_SECRET!, { expiresIn: '7d' });
+      return json({
+        user: { id: user.id, email: user.email, fullName: user.full_name, role: user.role },
+        token,
+      });
+    }
+    case 'auth/register': {
+      const { email, password, fullName, phone, role, countryId } = body;
+      if (!email || !password || !fullName) return json({ message: 'Email, password, and fullName required' }, 400);
+      const existing = await prisma.users.findUnique({ where: { email } });
+      if (existing) return json({ message: 'Email already registered' }, 409);
+      const bcrypt = await import('bcryptjs');
+      const passwordHash = await bcrypt.hash(password, 12);
+      const user = await prisma.users.create({
+        data: {
+          email,
+          password_hash: passwordHash,
+          full_name: fullName,
+          phone,
+          role: role || 'INVESTOR',
+          country_id: countryId,
+        },
+      });
+      const token = jwt.sign({ sub: user.id, email: user.email, role: user.role }, JWT_SECRET!, { expiresIn: '7d' });
+      return json({
+        user: { id: user.id, email: user.email, fullName: user.full_name, role: user.role },
+        token,
+      });
+    }
+    case 'auth/forgot-password': {
+      const { email } = body;
+      if (!email) return json({ message: 'Email required' }, 400);
+      const user = await prisma.users.findUnique({ where: { email } });
+      if (!user) return json({ message: 'If account exists, reset link sent' });
+      const resetToken = jwt.sign({ sub: user.id, type: 'password_reset' }, JWT_SECRET!, { expiresIn: '1h' });
+      return json({ message: 'If account exists, reset link sent', resetToken });
+    }
+    case 'auth/reset-password': {
+      const { token: resetToken, newPassword } = body;
+      if (!resetToken || !newPassword) return json({ message: 'Token and newPassword required' }, 400);
+      try {
+        const payload = jwt.verify(resetToken, JWT_SECRET!) as { sub: string; type: string };
+        if (payload.type !== 'password_reset') return json({ message: 'Invalid token' }, 400);
+        const bcrypt = await import('bcryptjs');
+        const passwordHash = await bcrypt.hash(newPassword, 12);
+        await prisma.users.update({ where: { id: payload.sub }, data: { password_hash: passwordHash } });
+        return json({ message: 'Password reset successfully' });
+      } catch {
+        return json({ message: 'Invalid or expired token' }, 400);
+      }
+    }
+    case 'contact': {
+      const { name, email, subject, message } = body;
+      if (!name || !email || !message) return json({ message: 'Name, email, and message required' }, 400);
+      await prisma.notifications.create({
+        data: {
+          user_id: '00000000-0000-0000-0000-000000000000',
+          title: `Contact: ${subject || 'No subject'}`,
+          message: `From ${name} (${email}): ${message}`,
+          type: 'CONTACT_FORM',
+        },
+      });
+      return json({ message: 'Message received. We will get back to you within 24 hours.' });
+    }
+    case 'bids/my': {
+      const token = extractToken(req);
+      const payload = token ? verifyToken(token) : null;
+      if (!payload) return json({ message: 'Unauthorized' }, 401);
+      const bids = await prisma.smart_bids.findMany({
+        where: { client_id: payload.sub },
+        orderBy: { created_at: 'desc' },
+        include: {
+          client: { select: { id: true, full_name: true, email: true } },
+          category: { select: { id: true, name: true } },
+          country: { select: { id: true, name: true, code: true } },
+          responses: { include: { company: { select: { id: true, company_name: true, logo_url: true, is_verified: true } } } },
+        },
+      });
+      return json(bids);
+    }
+    case 'notifications': {
+      const token = extractToken(req);
+      const payload = token ? verifyToken(token) : null;
+      if (!payload) return json({ message: 'Unauthorized' }, 401);
+      const notifs = await prisma.notifications.findMany({
+        where: { user_id: payload.sub },
+        orderBy: { created_at: 'desc' },
+        take: 50,
+      });
+      return json(notifs);
+    }
+    case 'notifications/read': {
+      const token = extractToken(req);
+      const payload = token ? verifyToken(token) : null;
+      if (!payload) return json({ message: 'Unauthorized' }, 401);
+      const { ids } = body;
+      if (ids && Array.isArray(ids)) {
+        await prisma.notifications.updateMany({
+          where: { id: { in: ids }, user_id: payload.sub },
+          data: { is_read: true },
+        });
+      } else {
+        await prisma.notifications.updateMany({
+          where: { user_id: payload.sub, is_read: false },
+          data: { is_read: true },
+        });
+      }
+      return json({ message: 'Notifications marked as read' });
+    }
+    default:
+      return json({ message: 'Not found' }, 404);
+  }
+}
+
+async function handlePUT(path: string, req: NextRequest) {
+  const token = extractToken(req);
+  const payload = token ? verifyToken(token) : null;
+  if (!payload) return json({ message: 'Unauthorized' }, 401);
+
+  if (path === 'auth/me') {
+    const body = await req.json();
+    const user = await prisma.users.update({
+      where: { id: payload.sub },
+      data: {
+        ...(body.fullName && { full_name: body.fullName }),
+        ...(body.phone && { phone: body.phone }),
+        ...(body.avatarUrl && { avatar_url: body.avatarUrl }),
+      },
+      select: { id: true, email: true, full_name: true, phone: true, role: true, avatar_url: true, is_verified: true, created_at: true },
+    });
+    return json(user);
+  }
+
+  return json({ message: 'Not found' }, 404);
+}
+
+async function handleDELETE(path: string, req: NextRequest) {
+  const token = extractToken(req);
+  const payload = token ? verifyToken(token) : null;
+  if (!payload) return json({ message: 'Unauthorized' }, 401);
+
+  if (payload.role !== 'ADMIN') return json({ message: 'Forbidden' }, 403);
+
+  if (path.startsWith('admin/articles/')) {
+    const id = path.split('/').pop()!;
+    await prisma.articles.delete({ where: { id } });
+    return json({ message: 'Article deleted' });
+  }
+
+  if (path.startsWith('admin/companies/')) {
+    const id = path.split('/').pop()!;
+    await prisma.companies.delete({ where: { id } });
+    return json({ message: 'Company deleted' });
+  }
+
+  return json({ message: 'Not found' }, 404);
+}
+
 function extractPath(pathname: string): string {
   return pathname.replace(/^\/api\//, '');
 }
 
-export async function GET(req: NextRequest) {
+async function handler(req: NextRequest) {
+  const ip = req.headers.get('x-forwarded-for') || req.headers.get('x-real-ip') || 'unknown';
+  if (!checkRateLimit(ip)) {
+    return json({ message: 'Rate limit exceeded. Try again later.' }, 429);
+  }
+
   try {
     const path = extractPath(req.nextUrl.pathname);
     if (!path || path === '') return json({ status: 'ok', message: 'Toorvest API is running' });
-    return await handleGET(path, req);
+
+    const method = req.method;
+
+    if (method === 'GET' && !isPublicPath(path) && !isAuthPath(path)) {
+      const token = extractToken(req);
+      const payload = token ? verifyToken(token) : null;
+      if (!payload) return json({ message: 'Unauthorized' }, 401);
+      if (isAdminPath(path) && payload.role !== 'ADMIN') {
+        return json({ message: 'Forbidden' }, 403);
+      }
+    }
+
+    switch (method) {
+      case 'GET': return await handleGET(path, req);
+      case 'POST': return await handlePOST(path, req);
+      case 'PUT': return await handlePUT(path, req);
+      case 'DELETE': return await handleDELETE(path, req);
+      default: return json({ message: 'Method not allowed' }, 405);
+    }
   } catch (e: any) {
-    return json({ message: e.message || 'Internal server error' }, 500);
+    console.error('API Error:', e.message);
+    return json({ message: 'Internal server error' }, 500);
   }
 }
+
+const AUTH_PATHS = ['auth/login', 'auth/register', 'auth/forgot-password', 'auth/reset-password', 'auth/me'];
+
+function isAuthPath(path: string): boolean {
+  return AUTH_PATHS.some(p => path === p);
+}
+
+export const GET = handler;
+export const POST = handler;
+export const PUT = handler;
+export const DELETE = handler;

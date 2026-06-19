@@ -23,7 +23,10 @@ export function CountriesGrid() {
   useEffect(() => {
     api.get('/countries')
       .then((res) => setCountries(res.data))
-      .catch(() => {})
+      .catch((err) => {
+        console.error('Failed to load countries:', err);
+        setCountries([]);
+      })
       .finally(() => setLoading(false));
   }, []);
 

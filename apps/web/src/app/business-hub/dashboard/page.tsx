@@ -40,7 +40,10 @@ export default function DashboardPage() {
   useEffect(() => {
     api.get('/bids/my')
       .then((res) => setBids(Array.isArray(res.data) ? res.data : []))
-      .catch(() => {})
+      .catch((err) => {
+        console.error('Failed to load bids:', err);
+        setBids([]);
+      })
       .finally(() => setLoading(false));
   }, []);
 

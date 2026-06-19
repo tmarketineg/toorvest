@@ -93,7 +93,7 @@ export function LoginForm() {
           <input type="checkbox" className="rounded border-[hsl(var(--border))]" />
           Remember me
         </label>
-        <Link href="#" className="text-sm font-medium text-brand-600 hover:text-brand-700">
+        <Link href="/auth/forgot-password" className="text-sm font-medium text-brand-600 hover:text-brand-700">
           Forgot password?
         </Link>
       </div>

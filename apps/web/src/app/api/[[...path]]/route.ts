@@ -432,7 +432,7 @@ function isAuthPath(path: string): boolean {
   return AUTH_PATHS.some(p => path === p);
 }
 
-export const GET = handler;
-export const POST = handler;
-export const PUT = handler;
-export const DELETE = handler;
+export async function GET(req: NextRequest) { return handler(req); }
+export async function POST(req: NextRequest) { return handler(req); }
+export async function PUT(req: NextRequest) { return handler(req); }
+export async function DELETE(req: NextRequest) { return handler(req); }

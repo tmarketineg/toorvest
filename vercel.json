@@ -1,6 +1,6 @@
 {
   "installCommand": "npm install",
-  "buildCommand": "cd apps/api && npx prisma generate && cd ../../apps/web && npx next build",
+  "buildCommand": "cd apps/api && ../../node_modules/.bin/prisma generate && cd ../../apps/web && npx next build",
   "framework": "nextjs",
   "outputDirectory": "apps/web/.next",
   "functions": {

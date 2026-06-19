@@ -9,3 +9,5 @@ dist/
 .turbo/
 *.tsbuildinfo
 apps/api/uploads/
+
+.vercel

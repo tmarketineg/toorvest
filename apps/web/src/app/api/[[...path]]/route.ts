@@ -275,14 +275,7 @@ async function handlePOST(path: string, req: NextRequest) {
   if (path === 'contact') {
     const { name, email, subject, message } = body;
     if (!name || !email || !message) return json({ message: 'Name, email, and message required' }, 400);
-    await prisma.notifications.create({
-      data: {
-        user_id: '00000000-0000-0000-0000-000000000000',
-        title: `Contact: ${subject || 'No subject'}`,
-        message: `From ${name} (${email}): ${message}`,
-        type: 'CONTACT_FORM',
-      },
-    });
+    console.log(`Contact form submission: ${name} <${email}> - ${subject}: ${message}`);
     return json({ message: 'Message received. We will get back to you within 24 hours.' });
   }
 

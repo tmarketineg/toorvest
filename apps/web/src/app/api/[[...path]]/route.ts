@@ -426,7 +426,7 @@ async function handler(req: NextRequest) {
   }
 }
 
-const AUTH_PATHS = ['auth/login', 'auth/register', 'auth/forgot-password', 'auth/reset-password', 'auth/me'];
+const AUTH_PATHS = ['auth/login', 'auth/register', 'auth/forgot-password', 'auth/reset-password', 'auth/me', 'contact'];
 
 function isAuthPath(path: string): boolean {
   return AUTH_PATHS.some(p => path === p);

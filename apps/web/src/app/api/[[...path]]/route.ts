@@ -209,127 +209,132 @@ async function handleGET(path: string, req: NextRequest) {
 async function handlePOST(path: string, req: NextRequest) {
   const body = await req.json();
 
-  switch (path) {
-    case 'auth/login': {
-      const { email, password } = body;
-      if (!email || !password) return json({ message: 'Email and password required' }, 400);
-      const user = await prisma.users.findUnique({ where: { email } });
-      if (!user) return json({ message: 'Invalid credentials' }, 401);
-      const bcrypt = await import('bcryptjs');
-      const valid = await bcrypt.compare(password, user.password_hash);
-      if (!valid) return json({ message: 'Invalid credentials' }, 401);
-      const token = jwt.sign({ sub: user.id, email: user.email, role: user.role }, JWT_SECRET!, { expiresIn: '7d' });
-      return json({
-        user: { id: user.id, email: user.email, fullName: user.full_name, role: user.role },
-        token,
-      });
-    }
-    case 'auth/register': {
-      const { email, password, fullName, phone, role, countryId } = body;
-      if (!email || !password || !fullName) return json({ message: 'Email, password, and fullName required' }, 400);
-      const existing = await prisma.users.findUnique({ where: { email } });
-      if (existing) return json({ message: 'Email already registered' }, 409);
-      const bcrypt = await import('bcryptjs');
-      const passwordHash = await bcrypt.hash(password, 12);
-      const user = await prisma.users.create({
-        data: {
-          email,
-          password_hash: passwordHash,
-          full_name: fullName,
-          phone,
-          role: role || 'INVESTOR',
-          country_id: countryId,
-        },
-      });
-      const token = jwt.sign({ sub: user.id, email: user.email, role: user.role }, JWT_SECRET!, { expiresIn: '7d' });
-      return json({
-        user: { id: user.id, email: user.email, fullName: user.full_name, role: user.role },
-        token,
-      });
-    }
-    case 'auth/forgot-password': {
-      const { email } = body;
-      if (!email) return json({ message: 'Email required' }, 400);
-      const user = await prisma.users.findUnique({ where: { email } });
-      if (!user) return json({ message: 'If account exists, reset link sent' });
-      const resetToken = jwt.sign({ sub: user.id, type: 'password_reset' }, JWT_SECRET!, { expiresIn: '1h' });
-      return json({ message: 'If account exists, reset link sent', resetToken });
-    }
-    case 'auth/reset-password': {
-      const { token: resetToken, newPassword } = body;
-      if (!resetToken || !newPassword) return json({ message: 'Token and newPassword required' }, 400);
-      try {
-        const payload = jwt.verify(resetToken, JWT_SECRET!) as { sub: string; type: string };
-        if (payload.type !== 'password_reset') return json({ message: 'Invalid token' }, 400);
-        const bcrypt = await import('bcryptjs');
-        const passwordHash = await bcrypt.hash(newPassword, 12);
-        await prisma.users.update({ where: { id: payload.sub }, data: { password_hash: passwordHash } });
-        return json({ message: 'Password reset successfully' });
-      } catch {
-        return json({ message: 'Invalid or expired token' }, 400);
-      }
-    }
-    case 'contact': {
-      const { name, email, subject, message } = body;
-      if (!name || !email || !message) return json({ message: 'Name, email, and message required' }, 400);
-      await prisma.notifications.create({
-        data: {
-          user_id: '00000000-0000-0000-0000-000000000000',
-          title: `Contact: ${subject || 'No subject'}`,
-          message: `From ${name} (${email}): ${message}`,
-          type: 'CONTACT_FORM',
-        },
-      });
-      return json({ message: 'Message received. We will get back to you within 24 hours.' });
-    }
-    case 'bids/my': {
-      const token = extractToken(req);
-      const payload = token ? verifyToken(token) : null;
-      if (!payload) return json({ message: 'Unauthorized' }, 401);
-      const bids = await prisma.smart_bids.findMany({
-        where: { client_id: payload.sub },
-        orderBy: { created_at: 'desc' },
-        include: {
-          client: { select: { id: true, full_name: true, email: true } },
-          category: { select: { id: true, name: true } },
-          country: { select: { id: true, name: true, code: true } },
-          responses: { include: { company: { select: { id: true, company_name: true, logo_url: true, is_verified: true } } } },
-        },
-      });
-      return json(bids);
-    }
-    case 'notifications': {
-      const token = extractToken(req);
-      const payload = token ? verifyToken(token) : null;
-      if (!payload) return json({ message: 'Unauthorized' }, 401);
-      const notifs = await prisma.notifications.findMany({
-        where: { user_id: payload.sub },
-        orderBy: { created_at: 'desc' },
-        take: 50,
-      });
-      return json(notifs);
-    }
-    case 'notifications/read': {
-      const token = extractToken(req);
-      const payload = token ? verifyToken(token) : null;
-      if (!payload) return json({ message: 'Unauthorized' }, 401);
-      const { ids } = body;
-      if (ids && Array.isArray(ids)) {
-        await prisma.notifications.updateMany({
-          where: { id: { in: ids }, user_id: payload.sub },
-          data: { is_read: true },
-        });
-      } else {
-        await prisma.notifications.updateMany({
-          where: { user_id: payload.sub, is_read: false },
-          data: { is_read: true },
-        });
-      }
-      return json({ message: 'Notifications marked as read' });
-    }
-    default:
-      return json({ message: 'Not found' }, 404);
+  if (path === 'auth/login') {
+    const { email, password } = body;
+    if (!email || !password) return json({ message: 'Email and password required' }, 400);
+    const user = await prisma.users.findUnique({ where: { email } });
+    if (!user) return json({ message: 'Invalid credentials' }, 401);
+    const bcrypt = await import('bcryptjs');
+    const valid = await bcrypt.compare(password, user.password_hash);
+    if (!valid) return json({ message: 'Invalid credentials' }, 401);
+    const token = jwt.sign({ sub: user.id, email: user.email, role: user.role }, JWT_SECRET!, { expiresIn: '7d' });
+    return json({
+      user: { id: user.id, email: user.email, fullName: user.full_name, role: user.role },
+      token,
+    });
   }
+
+  if (path === 'auth/register') {
+    const { email, password, fullName, phone, role, countryId } = body;
+    if (!email || !password || !fullName) return json({ message: 'Email, password, and fullName required' }, 400);
+    const existing = await prisma.users.findUnique({ where: { email } });
+    if (existing) return json({ message: 'Email already registered' }, 409);
+    const bcrypt = await import('bcryptjs');
+    const passwordHash = await bcrypt.hash(password, 12);
+    const user = await prisma.users.create({
+      data: {
+        email,
+        password_hash: passwordHash,
+        full_name: fullName,
+        phone,
+        role: role || 'INVESTOR',
+        country_id: countryId,
+      },
+    });
+    const token = jwt.sign({ sub: user.id, email: user.email, role: user.role }, JWT_SECRET!, { expiresIn: '7d' });
+    return json({
+      user: { id: user.id, email: user.email, fullName: user.full_name, role: user.role },
+      token,
+    });
+  }
+
+  if (path === 'auth/forgot-password') {
+    const { email } = body;
+    if (!email) return json({ message: 'Email required' }, 400);
+    const user = await prisma.users.findUnique({ where: { email } });
+    if (!user) return json({ message: 'If account exists, reset link sent' });
+    const resetToken = jwt.sign({ sub: user.id, type: 'password_reset' }, JWT_SECRET!, { expiresIn: '1h' });
+    return json({ message: 'If account exists, reset link sent', resetToken });
+  }
+
+  if (path === 'auth/reset-password') {
+    const { token: resetToken, newPassword } = body;
+    if (!resetToken || !newPassword) return json({ message: 'Token and newPassword required' }, 400);
+    try {
+      const payload = jwt.verify(resetToken, JWT_SECRET!) as { sub: string; type: string };
+      if (payload.type !== 'password_reset') return json({ message: 'Invalid token' }, 400);
+      const bcrypt = await import('bcryptjs');
+      const passwordHash = await bcrypt.hash(newPassword, 12);
+      await prisma.users.update({ where: { id: payload.sub }, data: { password_hash: passwordHash } });
+      return json({ message: 'Password reset successfully' });
+    } catch {
+      return json({ message: 'Invalid or expired token' }, 400);
+    }
+  }
+
+  if (path === 'contact') {
+    const { name, email, subject, message } = body;
+    if (!name || !email || !message) return json({ message: 'Name, email, and message required' }, 400);
+    await prisma.notifications.create({
+      data: {
+        user_id: '00000000-0000-0000-0000-000000000000',
+        title: `Contact: ${subject || 'No subject'}`,
+        message: `From ${name} (${email}): ${message}`,
+        type: 'CONTACT_FORM',
+      },
+    });
+    return json({ message: 'Message received. We will get back to you within 24 hours.' });
+  }
+
+  if (path === 'bids/my') {
+    const token = extractToken(req);
+    const payload = token ? verifyToken(token) : null;
+    if (!payload) return json({ message: 'Unauthorized' }, 401);
+    const bids = await prisma.smart_bids.findMany({
+      where: { client_id: payload.sub },
+      orderBy: { created_at: 'desc' },
+      include: {
+        client: { select: { id: true, full_name: true, email: true } },
+        category: { select: { id: true, name: true } },
+        country: { select: { id: true, name: true, code: true } },
+        responses: { include: { company: { select: { id: true, company_name: true, logo_url: true, is_verified: true } } } },
+      },
+    });
+    return json(bids);
+  }
+
+  if (path === 'notifications') {
+    const token = extractToken(req);
+    const payload = token ? verifyToken(token) : null;
+    if (!payload) return json({ message: 'Unauthorized' }, 401);
+    const notifs = await prisma.notifications.findMany({
+      where: { user_id: payload.sub },
+      orderBy: { created_at: 'desc' },
+      take: 50,
+    });
+    return json(notifs);
+  }
+
+  if (path === 'notifications/read') {
+    const token = extractToken(req);
+    const payload = token ? verifyToken(token) : null;
+    if (!payload) return json({ message: 'Unauthorized' }, 401);
+    const { ids } = body;
+    if (ids && Array.isArray(ids)) {
+      await prisma.notifications.updateMany({
+        where: { id: { in: ids }, user_id: payload.sub },
+        data: { is_read: true },
+      });
+    } else {
+      await prisma.notifications.updateMany({
+        where: { user_id: payload.sub, is_read: false },
+        data: { is_read: true },
+      });
+    }
+    return json({ message: 'Notifications marked as read' });
+  }
+
+  return json({ message: 'Not found' }, 404);
 }
 
 async function handlePUT(path: string, req: NextRequest) {
@@ -392,13 +397,20 @@ async function handler(req: NextRequest) {
 
     const method = req.method;
 
-    if (method === 'GET' && !isPublicPath(path) && !isAuthPath(path)) {
+    if (isAuthPath(path)) {
+      // Auth endpoints are always accessible
+    } else if (method === 'GET' && !isPublicPath(path)) {
       const token = extractToken(req);
       const payload = token ? verifyToken(token) : null;
       if (!payload) return json({ message: 'Unauthorized' }, 401);
       if (isAdminPath(path) && payload.role !== 'ADMIN') {
         return json({ message: 'Forbidden' }, 403);
       }
+    } else if (method !== 'GET' && !isPublicPath(path)) {
+      // POST/PUT/DELETE to non-public, non-auth paths require auth
+      const token = extractToken(req);
+      const payload = token ? verifyToken(token) : null;
+      if (!payload) return json({ message: 'Unauthorized' }, 401);
     }
 
     switch (method) {

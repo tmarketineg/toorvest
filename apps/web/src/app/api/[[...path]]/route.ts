@@ -95,7 +95,10 @@ async function handleGET(path: string, req: NextRequest) {
     return json(await prisma.categories.findMany({ orderBy: { name: 'asc' } }));
   }
   if (path === 'emirates') {
-    return json(await prisma.emirates.findMany({ orderBy: { name: 'asc' } }));
+    const all = await prisma.emirates.findMany({ orderBy: { name: 'asc' } });
+    const seen = new Set<string>();
+    const unique = all.filter(e => { if (seen.has(e.name)) return false; seen.add(e.name); return true; });
+    return json(unique);
   }
 
   // Country by code: countries/AE or countries/by-code/AE
@@ -122,11 +125,13 @@ async function handleGET(path: string, req: NextRequest) {
   }
   if (path.startsWith('countries/') && path.endsWith('/emirates')) {
     const id = path.split('/')[1];
-    const emirates = await prisma.emirates.findMany({
+    const all = await prisma.emirates.findMany({
       where: { country_id: id },
       orderBy: { sort_order: 'asc' },
     });
-    return json(emirates);
+    const seen = new Set<string>();
+    const unique = all.filter(e => { if (seen.has(e.name)) return false; seen.add(e.name); return true; });
+    return json(unique);
   }
   if (path.startsWith('countries/') && path.endsWith('/tourism')) {
     const id = path.split('/')[1];

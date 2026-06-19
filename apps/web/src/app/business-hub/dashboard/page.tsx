@@ -11,6 +11,7 @@ import {
 } from '@phosphor-icons/react/dist/ssr';
 import api from '@/lib/api';
 import { useAuthStore } from '@/lib/store';
+import { SofiaWidget } from '@/components/sofia/SofiaWidget';
 
 interface Bid {
   id: string;
@@ -132,6 +133,10 @@ export default function DashboardPage() {
             )}
           </div>
         </div>
+      </section>
+
+      <section>
+        <SofiaWidget />
       </section>
     </div>
   );

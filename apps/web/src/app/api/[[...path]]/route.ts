@@ -176,6 +176,7 @@ async function handleGET(path: string, req: NextRequest) {
     if (sp.get('countryId')) where.country_id = sp.get('countryId');
     if (sp.get('categoryId')) where.category_id = sp.get('categoryId');
     if (sp.get('status')) where.status = sp.get('status');
+    if (sp.get('module')) where.module = sp.get('module');
     const [data, total] = await Promise.all([
       prisma.articles.findMany({
         where, skip, take: limit, orderBy: { published_at: 'desc' },
@@ -279,6 +280,16 @@ async function handleGET(path: string, req: NextRequest) {
       }),
     ]);
     return json({ articles, companies, projects });
+  }
+
+  // Admin: list users
+  if (path === 'admin/users') {
+    const users = await prisma.users.findMany({
+      skip, take: limit, orderBy: { created_at: 'desc' },
+      select: { id: true, email: true, full_name: true, phone: true, role: true, is_verified: true, created_at: true },
+    });
+    const total = await prisma.users.count();
+    return json({ data: users, meta: { total, page, limit, totalPages: Math.ceil(total / limit) } });
   }
 
   // Auth: get current user

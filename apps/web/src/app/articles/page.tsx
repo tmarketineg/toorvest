@@ -36,7 +36,8 @@ export default function ArticlesPage() {
       else setLoading(true);
 
       const response = await api.get('/articles', { params: { page, limit: 20 } });
-      const { articles: fetched, pagination: pag } = response.data;
+      const fetched = response.data.data || [];
+      const pag = response.data.meta || { page: 1, limit: 20, total: 0, totalPages: 1 };
 
       setArticles(prev => append ? [...prev, ...fetched] : fetched);
       setPagination(pag);

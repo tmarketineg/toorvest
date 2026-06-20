@@ -40,7 +40,7 @@ export default function BusinessHubPage() {
           api.get('/articles?module=BUSINESS_HUB&limit=3'),
         ]);
         setCompanies(companiesRes.data.data || []);
-        setArticles(articlesRes.data.data?.articles || []);
+        setArticles(articlesRes.data.data || []);
       } catch (err) {
         console.error('Failed to fetch data:', err);
         setError('Failed to load data. Please try again later.');

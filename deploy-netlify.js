@@ -7,6 +7,7 @@ const SITE_ID = '6d063c55-ca1a-4f65-bc76-6e328a7d0940';
 const AUTH = 'nfp_Cskac3e49yFoopDytnrsXBkgDWqQmY9d83a6';
 const ROOT = __dirname;
 const WEB_DIR = path.join(ROOT, 'apps/web');
+const NEXT_DIR = path.join(WEB_DIR, '.next');
 
 function sha1(content) {
   return crypto.createHash('sha1').update(content).digest('hex');
@@ -21,27 +22,69 @@ const ntHash = sha1(ntContent);
 files['/netlify.toml'] = ntHash;
 hashMap[ntHash] = { localPath: path.join(ROOT, 'netlify.toml'), netlifyPath: '/netlify.toml' };
 
-// Walk web dir
-function walkDir(dir, base) {
+// Add public/ directory
+function walkPublic(dir, base) {
   const entries = fs.readdirSync(dir, { withFileTypes: true });
   for (const e of entries) {
     const full = path.join(dir, e.name);
     const rel = path.join(base, e.name).replace(/\\/g, '/');
     if (e.isDirectory()) {
-      if (['node_modules', '.next', '.git'].includes(e.name)) continue;
-      walkDir(full, rel);
+      walkPublic(full, rel);
     } else {
       const content = fs.readFileSync(full);
-      const key = '/' + rel;
+      const key = '/public/' + rel;
       const hash = sha1(content);
       files[key] = hash;
       hashMap[hash] = { localPath: full, netlifyPath: key };
     }
   }
 }
-walkDir(WEB_DIR, '');
+const publicDir = path.join(WEB_DIR, 'public');
+if (fs.existsSync(publicDir)) walkPublic(publicDir, '');
+
+// Add .next/static/ (client-side assets)
+function walkNextStatic(dir, base) {
+  const entries = fs.readdirSync(dir, { withFileTypes: true });
+  for (const e of entries) {
+    const full = path.join(dir, e.name);
+    const rel = path.join(base, e.name).replace(/\\/g, '/');
+    if (e.isDirectory()) {
+      walkNextStatic(full, rel);
+    } else {
+      const content = fs.readFileSync(full);
+      const key = '/_next/static/' + rel;
+      const hash = sha1(content);
+      files[key] = hash;
+      hashMap[hash] = { localPath: full, netlifyPath: key };
+    }
+  }
+}
+const nextStatic = path.join(NEXT_DIR, 'static');
+if (fs.existsSync(nextStatic)) walkNextStatic(nextStatic, '');
+
+// Add .next/server/app/ pages as HTML
+function walkServerApp(dir, base) {
+  const entries = fs.readdirSync(dir, { withFileTypes: true });
+  for (const e of entries) {
+    const full = path.join(dir, e.name);
+    const rel = path.join(base, e.name).replace(/\\/g, '/');
+    if (e.isDirectory()) {
+      walkServerApp(full, rel);
+    } else if (e.name.endsWith('.html')) {
+      const content = fs.readFileSync(full);
+      // Map server/app/page.html -> /page.html
+      const key = '/' + rel.replace(/\.html$/, '').replace(/\/index$/, '') || '/';
+      const hash = sha1(content);
+      files[key] = hash;
+      hashMap[hash] = { localPath: full, netlifyPath: key };
+    }
+  }
+}
+const serverApp = path.join(NEXT_DIR, 'server', 'app');
+if (fs.existsSync(serverApp)) walkServerApp(serverApp, '');
 
 console.log('Total files:', Object.keys(files).length);
+console.log('Sample:', Object.keys(files).slice(0, 10));
 
 const body = JSON.stringify({ files, branch: 'main' });
 
@@ -67,7 +110,7 @@ const req = https.request({
       console.log('Uploading', j.required.length, 'new files...');
       uploadFiles(j.required, j.id);
     } else {
-      console.log('All files cached - deploy ready!');
+      console.log('All files cached!');
     }
   });
 });

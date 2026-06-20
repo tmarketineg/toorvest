@@ -92,7 +92,7 @@ export default function InvestmentPage() {
         );
 
         const rawArticles: ArticleItem[] = (
-          articlesRes.data.data?.articles || []
+          articlesRes.data.data || []
         ).map((a: Record<string, unknown>) => ({
           title: (a.title as string) || '',
           excerpt: (a.excerpt as string) || '',

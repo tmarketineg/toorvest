@@ -1,6 +1,6 @@
 [build]
   base = "apps/web"
-  command = "npx prisma generate && npx next build"
+  command = "cd ../.. && npm install --workspace=apps/web && cd apps/web && npx prisma generate && npx next build"
   publish = ".next"
 
 [[plugins]]
